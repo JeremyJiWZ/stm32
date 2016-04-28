@@ -237,4 +237,54 @@ int stm32_go_command( void )
   return STM32_OK;
 }
 
+int poke(u32 addr, u32 data)
+{
+  u8 data_in[5];
+  data_in[0]=data>>24;
+  data_in[1]=(data>>16)&0xFF;
+  data_in[2]=(data>>8)&0xFF;
+  data_in[3]=data&0xFF;
 
+  STM32_CHECK_INIT; 
+
+  // Send write request
+  stm32h_send_command( STM32_CMD_WRITE_FLASH );
+  STM32_EXPECT( STM32_COMM_ACK );
+  
+  // Send address
+  stm32h_send_address( addr );
+  STM32_EXPECT( STM32_COMM_ACK );
+
+  // Send data
+  stm32h_send_packet_with_checksum( data_in, 5 );
+  STM32_EXPECT( STM32_COMM_ACK );
+
+  return STM32_OK;
+}
+
+u32 peek(u32 addr)
+{
+  u8 data[4];
+  u32 data_out;
+
+  STM32_CHECK_INIT; 
+
+  // Send write request
+  stm32h_send_command( STM32_CMD_WRITE_FLASH );
+  STM32_EXPECT( STM32_COMM_ACK );
+  
+  // Send address
+  stm32h_send_address( address );
+  STM32_EXPECT( STM32_COMM_ACK );
+
+  // Get data
+  // stm32h_send_packet_with_checksum( data, datalen + 1 );
+  data[0]=stm32h_read_byte();
+  data[1]=stm32h_read_byte();
+  data[2]=stm32h_read_byte();
+  data[3]=stm32h_read_byte();
+  STM32_EXPECT( STM32_COMM_ACK );
+
+  data_out=(data[0]<<24)+(data[1]<<16)+(data[2]<<8)+(data[0]);
+  return data_out;
+}

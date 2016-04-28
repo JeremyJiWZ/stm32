@@ -53,13 +53,13 @@ int main( int argc, const char **argv )
   u8 send_go_command=0;
   u8 minor, major;
   u16 version;
+  u32 data_flash;
   long baud;
  
   // Argument validation
   if( argc < 4 )
   {
-    fprintf( stderr, "Usage: stm32ld <port> <baud> <binary image name|0 to not flash> [<0|1 to send Go command to new flashed app>]\n" );
-    fprintf( stderr, "Note: Thanks to Go command you don't need to change status of BOOT0 after flashing,\n\t\ttake care after power cycle ...\n\n\n" );
+    fprintf( stderr, "Usage: stm32ld <port> <baud> \n" );
     exit( 1 );
   }
   errno = 0;
@@ -68,30 +68,6 @@ int main( int argc, const char **argv )
   {
     fprintf( stderr, "Invalid baud '%s'\n", argv[ 2 ] );
     exit( 1 );
-  }
-  
-  if( argc >= 5 && strlen(argv[ 4 ])==1 && strncmp(argv[ 4 ], "1", 1)==0 )
-  {
-    send_go_command=1;
-  }
-
-  if( strlen(argv[ 3 ])==1 && strncmp(argv[ 3 ], "0", 1)==0 )
-  {
-    not_flashing=1;
-  }
-  else
-  {
-    if( ( fp = fopen( argv[ 3 ], "rb" ) ) == NULL )
-    {
-      fprintf( stderr, "Unable to open %s\n", argv[ 3 ] );
-      exit( 1 );
-    }
-    else
-    {
-      fseek( fp, 0, SEEK_END );
-      fpsize = ftell( fp );
-      fseek( fp, 0, SEEK_SET );
-    }
   }
   
   // Connect to bootloader
@@ -117,21 +93,21 @@ int main( int argc, const char **argv )
     }
   }
   
-  // Get chip ID
-  if( stm32_get_chip_id( &version ) != STM32_OK )
-  {
-    fprintf( stderr, "Unable to get chip ID\n" );
-    exit( 1 );
-  }
-  else
-  {
-    printf( "Chip ID: %04X\n", version );
-    if( version != CHIP_ID && version != CHIP_ID_ALT )
+    // Get chip ID
+    if( stm32_get_chip_id( &version ) != STM32_OK )
     {
-      fprintf( stderr, "Unsupported chip ID" );
+      fprintf( stderr, "Unable to get chip ID\n" );
       exit( 1 );
     }
-  }
+    else
+    {
+      printf( "Chip ID: %04X\n", version );
+      if( version != CHIP_ID && version != CHIP_ID_ALT )
+      {
+        fprintf( stderr, "Unsupported chip ID" );
+        exit( 1 );
+      }
+    }
   
   if( not_flashing == 0 )
   {
@@ -170,29 +146,21 @@ int main( int argc, const char **argv )
     // Program flash
     setbuf( stdout, NULL );
     printf( "Programming flash ... ");
-    if( stm32_write_flash( writeh_read_data, writeh_progress ) != STM32_OK )
+    if( poke(0x80000000,0x12345678) != STM32_OK )
     {
       fprintf( stderr, "Unable to program FLASH memory.\n" );
       exit( 1 );
     }
-    else
+    else{
       printf( "\nDone.\n" );
+      data_flash=peek(0x80000000);
+      printf("%lu\n", data_flash);
+    }
 
     fclose( fp );
   }
   else
     printf( "Skipping flashing ... \n" );
-
-  if( send_go_command == 1 )
-  {
-    // Run GO
-    printf( "Sending Go command ... \n" );
-    if( stm32_go_command( ) != STM32_OK )
-    {
-      fprintf( stderr, "Unable to run Go command.\n" );
-      exit( 1 );
-    }
-  }
 
   return 0;
 }

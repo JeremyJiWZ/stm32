@@ -47,6 +47,8 @@ int stm32_write_unprotect();
 int stm32_erase_flash();
 int stm32_write_flash( p_read_data read_data_func, p_progress progress_func );
 int stm32_go_command( void );
+u32 peek(u32 addr);
+int poke(u32 addr, u32 data);
 
 #endif
 
